@@ -252,7 +252,7 @@ export default function AIMonitor({ onApplySuggestion }) {
 
             {onApplySuggestion && (
               <button
-                onClick={() => onApplySuggestion(aiOutput)}
+                onClick={() => onApplySuggestion(aiOutput.description, aiOutput.suggestedPriority)}
                 style={{
                   marginTop: '10px',
                   background: 'rgba(255, 255, 255, 0.1)',
