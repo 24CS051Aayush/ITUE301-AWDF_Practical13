@@ -71,8 +71,11 @@ async function generateTaskDescription(title, clientId = 'default') {
   // 3. Call Google Gemini API
   try {
     const genAI = new GoogleGenerativeAI(apiKey);
-    // Use gemini-1.5-flash or gemini-2.0-flash
-    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+    // Use gemini-2.5-flash (primary active production model) with gemini-flash-latest fallback
+    const candidateModels = ['gemini-2.5-flash', 'gemini-flash-latest', 'gemini-2.5-flash-lite'];
+    let result = null;
+    let selectedModel = candidateModels[0];
+    let lastError = null;
 
     const prompt = `You are an expert full-stack developer and agile project management assistant.
 Analyze this task title: "${title.trim()}".
@@ -84,10 +87,24 @@ Provide an actionable, structured task summary in valid JSON format:
 }
 Return ONLY raw parseable JSON. Do not include markdown code block ticks (\`\`\`).`;
 
-    const result = await Promise.race([
-      model.generateContent(prompt),
-      new Promise((_, reject) => setTimeout(() => reject(new Error('AI API request timed out after 8 seconds')), 8000)),
-    ]);
+    for (const modelName of candidateModels) {
+      try {
+        const model = genAI.getGenerativeModel({ model: modelName });
+        result = await Promise.race([
+          model.generateContent(prompt),
+          new Promise((_, reject) => setTimeout(() => reject(new Error('AI API request timed out after 15 seconds')), 15000)),
+        ]);
+        selectedModel = modelName;
+        break;
+      } catch (mErr) {
+        lastError = mErr;
+        console.warn(`[AI Service] Model ${modelName} failed (${mErr.message}). Trying fallback model...`);
+      }
+    }
+
+    if (!result) {
+      throw lastError || new Error('No candidate Gemini model succeeded');
+    }
 
     const rawText = result.response.text().trim();
     const cleanJson = rawText.replace(/```json/gi, '').replace(/```/g, '').trim();
@@ -111,8 +128,8 @@ Return ONLY raw parseable JSON. Do not include markdown code block ticks (\`\`\`
         ? parsed.suggestedPriority.toLowerCase()
         : 'medium',
       estimatedTime: parsed.estimatedTime || '2 hours',
-      provider: 'Google Gemini AI (gemini-1.5-flash)',
-      model: 'gemini-1.5-flash',
+      provider: `Google Gemini AI (${selectedModel})`,
+      model: selectedModel,
       isAIGenerated: true,
       fallback: false,
       timestamp: new Date().toISOString(),
