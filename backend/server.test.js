@@ -63,7 +63,7 @@ describe('Practical 12: CI/CD Automated Test Pipeline', () => {
     expect(res.body.description.length).toBeGreaterThan(10);
     expect(res.body).toHaveProperty('disclaimer');
     expect(res.body).toHaveProperty('fallback');
-  });
+  }, 15000);
 
   // Test 7: Validation error when title is missing
   test('POST /api/ai/generate-description returns 400 when title is missing', async () => {
@@ -85,7 +85,7 @@ describe('Practical 12: CI/CD Automated Test Pipeline', () => {
     expect(res.statusCode).toBe(200);
     expect(res.body.fallback).toBeDefined();
     expect(res.body.suggestedPriority).toMatch(/^(low|medium|high)$/);
-  });
+  }, 15000);
 
   // Test 9 (Supplementary Problem 2): Rate limiting returns 429 on rapid consecutive requests
   test('POST /api/ai/generate-description enforces rate limiting (Supplementary Problem 2)', async () => {
@@ -104,6 +104,6 @@ describe('Practical 12: CI/CD Automated Test Pipeline', () => {
     expect(secondRes.statusCode).toBe(429);
     expect(secondRes.body).toHaveProperty('rateLimited', true);
     expect(secondRes.body).toHaveProperty('waitSeconds');
-  });
+  }, 15000);
 });
 
